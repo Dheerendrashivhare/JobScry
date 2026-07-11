@@ -17,3 +17,6 @@ frontend/dist/
 *.db
 *.sqlite
 *.sqlite3
+
+# Local runtime data (resume uploads, etc.)
+var/

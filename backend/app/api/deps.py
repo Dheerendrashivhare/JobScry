@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 
 import jwt
-from fastapi import Depends
+from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +14,7 @@ from app.core.security import ACCESS_TOKEN_TYPE, decode_token
 from app.database.session import get_db
 from app.models import User, UserRole
 from app.repositories.user import UserRepository
+from app.schemas.common import Pagination
 
 DBSession = Annotated[AsyncSession, Depends(get_db)]
 
@@ -55,3 +56,13 @@ async def require_admin(current_user: CurrentUser) -> User:
 
 
 AdminUser = Annotated[User, Depends(require_admin)]
+
+
+def pagination_params(
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> Pagination:
+    return Pagination(limit=limit, offset=offset)
+
+
+PageParams = Annotated[Pagination, Depends(pagination_params)]

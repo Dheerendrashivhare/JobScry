@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.routes import auth
+from app.api.v1.routes import auth, credentials, profiles, providers, resumes, searches, settings
 
 api_router = APIRouter()
 
@@ -13,3 +13,9 @@ async def health() -> dict[str, str]:
 
 
 api_router.include_router(auth.router)
+api_router.include_router(profiles.router)
+api_router.include_router(searches.router)
+api_router.include_router(resumes.router)
+api_router.include_router(credentials.router)
+api_router.include_router(settings.router)
+api_router.include_router(providers.router)

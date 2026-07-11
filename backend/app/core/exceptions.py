@@ -54,6 +54,61 @@ class InsufficientPermissionsError(AppError):
     detail = "Not enough permissions"
 
 
+class ResourceNotFoundError(AppError):
+    status_code = 404
+    code = "not_found"
+    detail = "Resource not found"
+
+
+class ProfileNotFoundError(ResourceNotFoundError):
+    code = "profile_not_found"
+    detail = "Profile not found"
+
+
+class ResumeNotFoundError(ResourceNotFoundError):
+    code = "resume_not_found"
+    detail = "Resume not found"
+
+
+class SearchNotFoundError(ResourceNotFoundError):
+    code = "search_not_found"
+    detail = "Search not found"
+
+
+class CredentialNotFoundError(ResourceNotFoundError):
+    code = "credential_not_found"
+    detail = "Credential not found"
+
+
+class ProviderNotFoundError(ResourceNotFoundError):
+    code = "provider_not_found"
+    detail = "Provider not found"
+
+
+class ConflictError(AppError):
+    status_code = 409
+    code = "conflict"
+    detail = "Conflict"
+
+
+class UnsupportedResumeFormatError(AppError):
+    status_code = 422
+    code = "unsupported_resume_format"
+    detail = "Resume must be PDF, DOCX, or LaTeX"
+
+
+class ResumeTooLargeError(AppError):
+    status_code = 413
+    code = "resume_too_large"
+    detail = "Resume exceeds the maximum allowed size"
+
+
+class SecretUnreadableError(AppError):
+    status_code = 500
+    code = "secret_unreadable"
+    detail = "Stored secret could not be decrypted"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_request: Request, exc: AppError) -> JSONResponse:

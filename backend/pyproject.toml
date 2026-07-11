@@ -18,6 +18,7 @@ dependencies = [
     "pyjwt==2.10.1",
     "passlib[bcrypt]==1.7.4",
     "bcrypt==4.0.1",  # pin: passlib 1.7.4 reads bcrypt.__about__, removed in bcrypt>=4.1
+    "cryptography==46.0.7",  # Fernet encryption for stored provider credentials
     "python-multipart==0.0.20",
     "tenacity==9.0.0",
 ]

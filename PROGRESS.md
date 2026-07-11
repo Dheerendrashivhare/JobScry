@@ -9,7 +9,7 @@
 | 1 | Architecture | DONE (2026-07-10) | Scaffold + ARCHITECTURE.md + bootable skeleton; smoke test passing; awaiting owner approval |
 | 2 | Database | DONE (2026-07-11) | 15 SQLAlchemy models + Alembic initial migration; model tests pass; ER diagram; awaiting owner approval |
 | 3 | Authentication | DONE (2026-07-11) | Email+JWT (access+refresh), first-user=Admin, RBAC; 24 tests pass; live-run verified |
-| 4 | Backend APIs | not started | |
+| 4 | Backend APIs | DONE (2026-07-11) | Profiles/skills, resumes, credentials(Fernet), settings, providers, searches; 41 tests pass |
 | 5 | Job Provider Framework | not started | Free APIs + Apify (LinkedIn, Naukri) |
 | 6 | AI Matching | not started | Rule-based + optional LLM |
 | 7 | Scheduler | not started | Celery + Redis |
@@ -89,9 +89,33 @@
   login). Note: on SQLite `created_at` serialized tz-naive; on Postgres (`DateTime(timezone=True)`)
   it will carry the UTC offset.
 
+## Phase 4 notes (2026-07-11)
+
+- Clean-architecture slices (schema DTO → repository → service → route) for: profiles+skills,
+  resumes, credentials, settings, providers, searches. 32 API routes, all JWT-protected.
+- `core/crypto.py`: Fernet encrypt/decrypt/mask for stored secrets (added `cryptography` dep).
+  Key from `Settings.credentials_encryption_key`; any passphrase is stretched to a valid Fernet
+  key so the app runs without a key-gen step. Plaintext never leaves the service (masked hints only).
+- **Profiles** (`/profiles`): CRUD scoped to the user; one default enforced; skills normalized via
+  a canonical `skills` table (case-insensitive get-or-create); JSON config lists + scoring weights.
+- **Searches** (`/profiles/{id}/searches`) + **Resumes** (`/profiles/{id}/resumes`): nested,
+  ownership-checked. Resumes: multipart upload, PDF/DOCX/LaTeX only, 5 MB cap, stored on disk under
+  `resume_storage_dir/<user_id>/`, `parse_status=pending` (extraction is a later phase), download route.
+- **Credentials** (`/credentials`): PUT upsert (encrypted), GET list (masked), DELETE.
+- **Settings** (`/settings`): GET/PATCH, lazily created; **Providers** (`/providers`): self-seeding
+  8-provider catalog, admin-only enable/disable.
+- Cross-cutting: `AppError` hierarchy (404/409/413/422/500 codes), `Page[T]` + `Pagination`
+  (limit/offset, `Pagination` lives in `schemas.common` so services don't import the API layer).
+- Notable fixes: 204 routes need `response_model=None` (FastAPI rejects a body model on 204);
+  async read-after-write uses `populate_existing=True` so freshly-committed skills show up; insert
+  `ProfileSkill` by FK (never touch the lazy collection) to avoid MissingGreenlet.
+- Tests: `tests/test_api.py` (17) over the ASGI app (aiosqlite `get_db` override, shared
+  `conftest.py`) — profiles/skills, credentials masking, settings, providers RBAC, searches,
+  resume upload/format/primary/download, and per-user isolation. Full suite: **41 pass**.
+
 ## Next steps
 
-1. Phase 4 (Backend APIs): profiles + skills, resumes (upload/parse status), providers catalog,
-   per-user encrypted credentials store (Fernet helper), settings, searches — service/repo/DTO
-   per module, pagination/filtering (§16), tests. (Owner authorized autonomous progress through
-   remaining phases — no per-phase approval gate; keep committing per phase.)
+1. Phase 5 (Job Provider Framework): pluggable `JobProvider` interface (`search_jobs`/`normalize`/
+   `health_check`), a registry that enables a provider per-user from stored credentials, adapters for
+   the free APIs + Apify REST (LinkedIn, Naukri), best-effort failure policy (§5), normalize→Job,
+   expiry + dedup (§6), salary LPA parsing (§10). Owner authorized autonomous progress.

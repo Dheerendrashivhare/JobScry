@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # Encryption key for stored provider credentials (Fernet)
     credentials_encryption_key: str = "CHANGE_ME"
 
+    # Resume uploads
+    resume_storage_dir: str = "./var/resumes"
+    resume_max_bytes: int = 5 * 1024 * 1024  # 5 MB
+
 
 @lru_cache
 def get_settings() -> Settings:

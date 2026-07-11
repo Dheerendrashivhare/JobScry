@@ -11,11 +11,13 @@ dependencies = [
     "asyncpg==0.30.0",
     "pydantic==2.13.4",
     "pydantic-settings==2.14.2",
+    "email-validator==2.2.0",  # pydantic EmailStr backend
     "celery==5.6.3",
     "redis==8.0.1",
     "httpx==0.28.1",
     "pyjwt==2.10.1",
     "passlib[bcrypt]==1.7.4",
+    "bcrypt==4.0.1",  # pin: passlib 1.7.4 reads bcrypt.__about__, removed in bcrypt>=4.1
     "python-multipart==0.0.20",
     "tenacity==9.0.0",
 ]

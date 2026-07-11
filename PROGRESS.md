@@ -8,7 +8,7 @@
 |---|-------|--------|-------|
 | 1 | Architecture | DONE (2026-07-10) | Scaffold + ARCHITECTURE.md + bootable skeleton; smoke test passing; awaiting owner approval |
 | 2 | Database | DONE (2026-07-11) | 15 SQLAlchemy models + Alembic initial migration; model tests pass; ER diagram; awaiting owner approval |
-| 3 | Authentication | not started | Email+JWT only |
+| 3 | Authentication | DONE (2026-07-11) | Email+JWT (access+refresh), first-user=Admin, RBAC; 24 tests pass; live-run verified |
 | 4 | Backend APIs | not started | |
 | 5 | Job Provider Framework | not started | Free APIs + Apify (LinkedIn, Naukri) |
 | 6 | AI Matching | not started | Rule-based + optional LLM |
@@ -66,9 +66,32 @@
 - DEVIATION from Phase-1 plan: `database/session.py` engine is now lazy (was eager in the
   scaffold) so importing models never requires the DB driver.
 
+## Phase 3 notes (2026-07-11)
+
+- Email + JWT auth (§12). Endpoints: `POST /api/v1/auth/register|login|refresh`,
+  `GET /api/v1/auth/me`, `GET /api/v1/auth/users` (admin-only).
+- **Registration policy (owner decision):** open self-registration; the first account
+  ever created becomes Admin, everyone after is User. No public admin-creation.
+- `core/security.py`: passwords via passlib `bcrypt_sha256` (no 72-byte limit);
+  JWT access + refresh with a `type` claim (access can't be used as refresh or vice-versa),
+  signed with `Settings.secret_key`. `bcrypt` pinned to 4.0.1 (passlib 1.7.4 reads
+  `bcrypt.__about__`, removed in bcrypt>=4.1). Added `email-validator` for `EmailStr`.
+- `core/exceptions.py`: `AppError` hierarchy + single handler → `{detail, code}` JSON
+  (401s carry `WWW-Authenticate: Bearer`). Services raise domain errors, never HTTPException.
+- `api/deps.py`: `get_current_user` (HTTPBearer), `CurrentUser`, `require_admin`/`AdminUser`
+  RBAC guards, `DBSession`. Repository (`repositories/user.py`) + service
+  (`services/auth.py`) own data access and the transaction boundary respectively.
+- Tests: `tests/test_auth.py` (14) over the ASGI app with an aiosqlite `get_db` override —
+  registration policy, login, refresh, current-user, RBAC, validation. Suite now **24 pass**.
+- **Live-run verified** (`/verify`): ran uvicorn on a SQLite-backed DB and drove the real
+  socket — happy path + 10 probes all correct (first=admin/second=user, 409 dup, 422 bad
+  email/short pw, 401 wrong-pw/unknown/no-token/wrong-token-type, 403 RBAC, case-insensitive
+  login). Note: on SQLite `created_at` serialized tz-naive; on Postgres (`DateTime(timezone=True)`)
+  it will carry the UTC offset.
+
 ## Next steps
 
-1. Owner approval of Phase 1 + Phase 2
-2. Phase 3 (Authentication): Email+JWT (access + refresh), password hashing (passlib/bcrypt),
-   `User`/RBAC dependencies, register/login/refresh endpoints, `Credential` encryption helper
-   (Fernet) for the per-user key store, auth tests. (Skip email-verify/reset per §12.)
+1. Phase 4 (Backend APIs): profiles + skills, resumes (upload/parse status), providers catalog,
+   per-user encrypted credentials store (Fernet helper), settings, searches — service/repo/DTO
+   per module, pagination/filtering (§16), tests. (Owner authorized autonomous progress through
+   remaining phases — no per-phase approval gate; keep committing per phase.)

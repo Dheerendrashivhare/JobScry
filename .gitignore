@@ -12,3 +12,8 @@ node_modules/
 .angular/
 frontend/dist/
 .DS_Store
+
+# Local SQLite DBs (Alembic autogenerate / smoke checks)
+*.db
+*.sqlite
+*.sqlite3

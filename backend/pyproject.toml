@@ -24,6 +24,7 @@ dependencies = [
 dev = [
     "pytest==8.3.4",
     "pytest-asyncio==0.25.0",
+    "aiosqlite==0.22.1",  # driver-free local Alembic autogenerate / DB smoke checks
     "black==24.10.0",
     "ruff==0.8.4",
     "isort==5.13.2",
@@ -37,6 +38,7 @@ target-version = ["py312"]
 [tool.isort]
 profile = "black"
 line_length = 100
+combine_as_imports = true
 
 [tool.ruff]
 line-length = 100
@@ -44,6 +46,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC"]
+
+# Keep ruff's import sorter and standalone isort in agreement.
+[tool.ruff.lint.isort]
+combine-as-imports = true
 
 [tool.mypy]
 python_version = "3.12"

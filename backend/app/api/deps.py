@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Annotated
 
+import httpx
 import jwt
 from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -66,3 +68,14 @@ def pagination_params(
 
 
 PageParams = Annotated[Pagination, Depends(pagination_params)]
+
+
+async def get_http_client() -> AsyncIterator[httpx.AsyncClient]:
+    """Shared outbound HTTP client for provider calls (overridable in tests)."""
+    async with httpx.AsyncClient(
+        timeout=30.0, headers={"User-Agent": "AJH/0.1 (+job-hunter)"}
+    ) as client:
+        yield client
+
+
+HttpClient = Annotated[httpx.AsyncClient, Depends(get_http_client)]

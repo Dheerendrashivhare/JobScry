@@ -10,7 +10,7 @@
 | 2 | Database | DONE (2026-07-11) | 15 SQLAlchemy models + Alembic initial migration; model tests pass; ER diagram; awaiting owner approval |
 | 3 | Authentication | DONE (2026-07-11) | Email+JWT (access+refresh), first-user=Admin, RBAC; 24 tests pass; live-run verified |
 | 4 | Backend APIs | DONE (2026-07-11) | Profiles/skills, resumes, credentials(Fernet), settings, providers, searches; 41 tests pass |
-| 5 | Job Provider Framework | not started | Free APIs + Apify (LinkedIn, Naukri) |
+| 5 | Job Provider Framework | DONE (2026-07-11) | 8 adapters + registry + ingestion pipeline (dedup/expiry/salary); 60 tests pass |
 | 6 | AI Matching | not started | Rule-based + optional LLM |
 | 7 | Scheduler | not started | Celery + Redis |
 | 8 | Notifications | not started | Telegram + Email |
@@ -113,9 +113,32 @@
   `conftest.py`) — profiles/skills, credentials masking, settings, providers RBAC, searches,
   resume upload/format/primary/download, and per-user isolation. Full suite: **41 pass**.
 
+## Phase 5 notes (2026-07-11)
+
+- `providers/base.py`: `JobProvider` ABC (`search_jobs` → raw dicts, `normalize` → `NormalizedJob`,
+  `health_check`) + `SearchQuery`/`NormalizedJob`/`ProviderHealth` DTOs. Adapters never touch the DB.
+- **8 adapters** (`providers/adapters/`): Remotive, Greenhouse+Lever (free, board tokens via search
+  params), Adzuna, Jooble, JSearch/RapidAPI, SerpAPI Google Jobs, Apify LinkedIn
+  (`fantastic-jobs~advanced-linkedin-job-search-api`), Apify Naukri
+  (`muhammetakkurtt~naukri-job-scraper`). Apify uses the REST `run-sync-get-dataset-items` endpoint
+  with the user's token; the LinkedIn recipe (titleSearch/descriptionSearch/…) passes through verbatim.
+- `providers/registry.py`: a provider is enabled for a user only when it's active in the catalog AND
+  all its required credentials exist in that user's encrypted store. Remotive + Greenhouse/Lever need
+  none, so they're always on.
+- Domain (pure, unit-tested): `salary.py` — LPA computed **only for INR** (₹ LPA / lakh / crore /
+  monthly / absolute / ranges; "competitive" and non-INR → null, no FX, §10); `dedup.py` — URL/ID
+  normalization for stable dedup keys + expiry check (§6).
+- `services/ingestion.py`: search → normalize → drop expired → collapse dupes → dedup vs the profile's
+  `seen_jobs` → store Jobs + JobSkills + SeenJobs; provider failures isolated (retry-once → mark
+  unhealthy → continue, §5); provider health persisted to the catalog; `last_run_at` stamped.
+  Exposed as `POST /api/v1/profiles/{id}/ingest` (Phase 7's scheduler will call the same service).
+- Outbound HTTP is an injectable `get_http_client` dependency → tests swap in an httpx `MockTransport`.
+- Tests: `test_providers_domain.py` (17, salary/dedup/expiry) + `test_ingestion.py` (2, full pipeline
+  over the ASGI app with mocked provider HTTP incl. re-run dedup). Full suite: **60 pass**.
+
 ## Next steps
 
-1. Phase 5 (Job Provider Framework): pluggable `JobProvider` interface (`search_jobs`/`normalize`/
-   `health_check`), a registry that enables a provider per-user from stored credentials, adapters for
-   the free APIs + Apify REST (LinkedIn, Naukri), best-effort failure policy (§5), normalize→Job,
-   expiry + dedup (§6), salary LPA parsing (§10). Owner authorized autonomous progress.
+1. Phase 6 (AI Matching): deterministic weighted scoring (§7) over profile↔job, gate ≥90, bands,
+   work-auth eligibility gating (§8), company-size/selection-odds mode (§9); LLM (user key) only for
+   explanations + résumé tailoring — never the score (integrity rule). Owner authorized autonomous
+   progress through remaining phases.

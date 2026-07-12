@@ -61,3 +61,13 @@ class CredentialService:
             return decrypt_secret(cred.encrypted_value)
         except SecretDecryptionError as exc:
             raise SecretUnreadableError() from exc
+
+    async def get_all_secrets(self, user_id: int) -> dict[CredentialKey, str]:
+        """All of a user's decrypted secrets (internal use). Unreadable rows skipped."""
+        out: dict[CredentialKey, str] = {}
+        for cred in await self.repo.list_for_user(user_id):
+            try:
+                out[cred.key] = decrypt_secret(cred.encrypted_value)
+            except SecretDecryptionError:
+                continue
+        return out

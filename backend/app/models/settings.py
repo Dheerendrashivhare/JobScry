@@ -30,6 +30,8 @@ class UserSettings(Base, TimestampMixin):
 
     # LLM (optional): no key -> scoring still works, tailoring/explanations off (§2).
     llm_provider: Mapped[LLMProvider | None] = enum_column(LLMProvider, nullable=True)
+    # Optional model override; falls back to the provider's default in matching.llm.
+    llm_model: Mapped[str | None] = mapped_column(String(64))
 
     # Telegram delivery.
     telegram_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

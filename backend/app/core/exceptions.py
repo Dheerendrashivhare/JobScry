@@ -103,6 +103,14 @@ class ResumeTooLargeError(AppError):
     detail = "Resume exceeds the maximum allowed size"
 
 
+class ProfileIncompleteError(AppError):
+    """Empty-state guard (§4): ask the user rather than run a pipeline on an empty profile."""
+
+    status_code = 422
+    code = "profile_incomplete"
+    detail = "Profile is missing information required to run this step"
+
+
 class SecretUnreadableError(AppError):
     status_code = 500
     code = "secret_unreadable"

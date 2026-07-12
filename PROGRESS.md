@@ -11,7 +11,7 @@
 | 3 | Authentication | DONE (2026-07-11) | Email+JWT (access+refresh), first-user=Admin, RBAC; 24 tests pass; live-run verified |
 | 4 | Backend APIs | DONE (2026-07-11) | Profiles/skills, resumes, credentials(Fernet), settings, providers, searches; 41 tests pass |
 | 5 | Job Provider Framework | DONE (2026-07-11) | 8 adapters + registry + ingestion pipeline (dedup/expiry/salary); 60 tests pass |
-| 6 | AI Matching | not started | Rule-based + optional LLM |
+| 6 | AI Matching | DONE (2026-07-11) | Deterministic weighted scoring + gate + work-auth + LLM explanations; 81 tests pass |
 | 7 | Scheduler | not started | Celery + Redis |
 | 8 | Notifications | not started | Telegram + Email |
 | 9 | Angular Frontend | not started | Build-check at phase gate only |
@@ -136,9 +136,37 @@
 - Tests: `test_providers_domain.py` (17, salary/dedup/expiry) + `test_ingestion.py` (2, full pipeline
   over the ASGI app with mocked provider HTTP incl. re-run dedup). Full suite: **60 pass**.
 
+## Phase 6 notes (2026-07-11)
+
+- `matching/scoring.py` — pure, deterministic weighted engine (§7). Dimensions: tech-stack 40 /
+  experience 20 / role 20 / domain 10 / source-quality 10 (per-profile weights). Required skills
+  count double. Experience parsed from the posting ("3-5 years", "5+ yrs"); unstated → neutral 70,
+  never a free pass. Source quality ranks company ATS (Greenhouse/Lever) above aggregators, with a
+  direct-apply/named-recruiter bonus. Bands 95+/92+/90+; **gate = profile.min_score (default 90)**.
+- **Integrity (§7) is structural, not a promise:** the score is computed by the engine and the gate
+  applied to it *before* the LLM is ever constructed. The LLM cannot raise a score, un-gate a job, or
+  add one — an LLM failure degrades to "no explanation", never to a changed result. Tests assert a
+  near-miss (69) stays below the gate rather than being nudged to 90.
+- `matching/eligibility.py` (§8): India / India-eligible-remote → **actionable**; offshore without
+  stated sponsorship → **eligibility-gated** (surfaced honestly, not deleted). The recommendation text
+  explicitly tells the owner to raise eligibility with the recruiter rather than declare authorisation
+  he doesn't have. Explicit "must be authorized to work in…" beats an open-remote reading.
+- `matching/llm.py`: one port, two adapters (Anthropic + OpenAI) over httpx with the user's key.
+  **Anthropic wire format verified against current docs** — `claude-opus-4-8`, `x-api-key` +
+  `anthropic-version: 2023-06-01`, and *no* `temperature`/`top_p` (those now 400 on Opus 4.8, so the
+  reflexive `temperature=0` would have broken every call). Handles `stop_reason: "refusal"`.
+- Selection-odds mode (§9): when `company_size_mode` is on, jobs above `max_headcount` are excluded —
+  but an *unknown* headcount is never dropped on a guess.
+- Empty-state (§4): matching a profile with no skills returns **422 `profile_incomplete`** — we ask
+  rather than score an empty profile.
+- `settings.llm_model` column added (+ migration `2cde58a24092`) so the user picks provider *and* model.
+- Routes: `POST /profiles/{id}/match`, `GET /profiles/{id}/matches`. Result reports honest counts
+  (evaluated / qualified / below_gate / excluded_by_size / eligibility_gated).
+- Tests: `test_matching_domain.py` (17, pure) + `test_matching.py` (4, ingest→score→list end-to-end).
+  Full suite: **81 pass**.
+
 ## Next steps
 
-1. Phase 6 (AI Matching): deterministic weighted scoring (§7) over profile↔job, gate ≥90, bands,
-   work-auth eligibility gating (§8), company-size/selection-odds mode (§9); LLM (user key) only for
-   explanations + résumé tailoring — never the score (integrity rule). Owner authorized autonomous
-   progress through remaining phases.
+1. Phase 7 (Scheduler): Celery + Redis, per-user lock, daily (24h) + catch-up (3-7d) windows, chaining
+   the existing ingestion → matching services. Then Phase 8 (Notifications: Telegram + Email, top-20
+   fresh cap, never repeat). Owner authorized autonomous progress.

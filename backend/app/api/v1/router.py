@@ -6,6 +6,7 @@ from app.api.v1.routes import (
     auth,
     credentials,
     ingestion,
+    matching,
     profiles,
     providers,
     resumes,
@@ -26,6 +27,7 @@ api_router.include_router(profiles.router)
 api_router.include_router(searches.router)
 api_router.include_router(resumes.router)
 api_router.include_router(ingestion.router)
+api_router.include_router(matching.router)
 api_router.include_router(credentials.router)
 api_router.include_router(settings.router)
 api_router.include_router(providers.router)

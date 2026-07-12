@@ -11,6 +11,7 @@ class SettingsRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     llm_provider: LLMProvider | None
+    llm_model: str | None
     telegram_enabled: bool
     telegram_chat_id: str | None
     email_enabled: bool
@@ -27,6 +28,7 @@ class SettingsUpdate(BaseModel):
     """Partial update — only provided fields change."""
 
     llm_provider: LLMProvider | None = None
+    llm_model: str | None = Field(default=None, max_length=64)
     telegram_enabled: bool | None = None
     telegram_chat_id: str | None = Field(default=None, max_length=64)
     email_enabled: bool | None = None

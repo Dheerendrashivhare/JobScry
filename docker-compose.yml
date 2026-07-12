@@ -1,0 +1,105 @@
+name: ajh
+
+# The API, worker, and beat all run from the same backend image with different commands.
+# Only the API applies migrations (RUN_MIGRATIONS=1) so the three can't race each other.
+x-backend-env: &backend-env
+  ENVIRONMENT: production
+  DEBUG: "false"
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ajh}:${POSTGRES_PASSWORD:-ajh}@postgres:5432/${POSTGRES_DB:-ajh}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  # Fail fast with a readable message instead of booting with an insecure default.
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env (see .env.example)}
+  CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY:?set CREDENTIALS_ENCRYPTION_KEY in .env}
+  RESUME_STORAGE_DIR: /data/resumes
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ajh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ajh}
+      POSTGRES_DB: ${POSTGRES_DB:-ajh}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-ajh} -d ${POSTGRES_DB:-ajh}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      RUN_MIGRATIONS: '1'
+    ports:
+      - '8000:8000' # direct access to /docs
+    volumes:
+      - resumes:/data/resumes
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8000/api/v1/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  worker:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: celery -A app.scheduler.celery_app worker --loglevel=info --concurrency=2
+    environment: *backend-env
+    volumes:
+      - resumes:/data/resumes
+    depends_on:
+      api:
+        condition: service_healthy # waits for migrations to have been applied
+
+  beat:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: celery -A app.scheduler.celery_app beat --loglevel=info
+    environment: *backend-env
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      # Repo root: the image needs both frontend/ and infra/nginx/.
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  resumes:

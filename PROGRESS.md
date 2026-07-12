@@ -15,9 +15,9 @@
 | 7 | Scheduler | DONE (2026-07-11) | Celery + Redis, beat daily 03:00 UTC, per-user Redis lock; catch-up mode |
 | 8 | Notifications | DONE (2026-07-11) | Telegram + Email; top-20 fresh cap, no minimum, never repeat; 85 tests pass |
 | 9 | Angular Frontend | DONE (2026-07-12) | Angular 19 (see deviation), Material+Tailwind, dark mode, lazy routes, JWT interceptor; `ng build` clean |
-| 10 | Testing | not started | |
-| 11 | Deployment | not started | Owner runs Docker manually |
-| 12 | Documentation | not started | |
+| 10 | Testing | DONE (2026-07-12) | Backend 85 (pytest) + frontend 19 (Vitest/jsdom) = **104**; found + fixed a real interceptor bug |
+| 11 | Deployment | DONE (2026-07-12) | Dockerfiles, 6-service compose, Nginx, CI. **Images NOT built locally — Docker daemon unresponsive here** |
+| 12 | Documentation | DONE (2026-07-12) | README, docs/DEPLOYMENT.md (+ existing ARCHITECTURE.md, DATABASE.md) |
 
 ## Key decisions log (2026-07-10)
 
@@ -217,10 +217,67 @@
   AG Grid + ApexCharts + Material legitimately exceed the 500 kB default. Remaining Sass deprecation
   warnings come from Angular Material's own theme mixin, not our code.
 
+## Phases 10-12 notes (2026-07-12)
+
+### Phase 10 — Testing (104 tests total)
+
+- Backend: **85** (pytest, in-memory SQLite — no DB service needed).
+- Frontend: **19** (Vitest + jsdom): auth interceptor (7), route guards (5), theme service (3),
+  login component (4).
+- **DEVIATION (§17 "Frontend: Vitest") — resolved, not skipped:** Angular 19 has no first-party
+  Vitest builder (that lands in Angular 20+). Used **AnalogJS** (`@analogjs/vite-plugin-angular` +
+  `@analogjs/vitest-angular`), the supported route for Angular 17-19. Karma/Jasmine was removed so
+  there is exactly one way to run tests. Bonus: jsdom means **no Chrome needed**, locally or in CI.
+- More Angular-19-pin knock-on pins (same class of problem as `ng-apexcharts` in Phase 9):
+  **Analog must be 1.22.5, not 2.x** (2.x targets Angular 20+ and fails to resolve Angular's
+  fesm2022 testing bundle); **jsdom 25, not 29** (29 pulls a transitive dep that `require()`s an
+  ESM module — broken on Node 20). Also needed `resolve.mainFields: ['module']` in `vite.config.mts`,
+  and an explicit `@oxc-parser/binding-win32-x64-msvc` install (npm optional-dependency bug on Windows).
+- **The tests found a real bug.** The JWT interceptor called `logout()` **twice** on a failed
+  refresh: the `/auth/refresh` 401 passes back through the interceptor itself, hitting the
+  "is an auth call" branch, *and* the refresh error handler. Two logouts = two router navigations.
+  The same branch also meant a **failed login logged you out — navigating away and wiping the
+  "Incorrect email or password" message the user needed to read**. Fixed: a 401 from `/auth/login`
+  or `/auth/refresh` is now treated as *the answer*, not a signal to refresh, and propagates to the
+  caller. Added a regression guard for the double-logout and a case for "401 with no refresh token".
+
+### Phase 11 — Deployment
+
+- Six services: `postgres`, `redis`, `api`, `worker`, `beat`, `web` (Nginx). The API, worker and
+  beat all run from **one** backend image with different commands, so they can't drift apart.
+- **Only the API migrates** (`RUN_MIGRATIONS=1`); worker/beat `depends_on: api → service_healthy`,
+  so they start only after migrations are applied and can never race each other on the same revision.
+- Missing secrets fail loudly via compose's `${VAR:?message}` rather than booting insecure defaults.
+- Nginx serves the SPA (with `index.html` fallback so a refresh on `/matches` doesn't 404), proxies
+  `/api` → `api:8000` (**this is why the backend needs no CORS layer**), caches hashed assets forever
+  and `index.html` never, and uses a 300s read timeout because pipeline runs block on provider calls.
+- CI (`.github/workflows/ci.yml`): backend lint+tests+`alembic check`, frontend Vitest+build, and a
+  job that **builds both Docker images**.
+- ⚠️ **HONEST STATUS: the images were never built on this machine.** `docker --version` and
+  `docker compose config` succeed because neither touches the engine; every command that needs the
+  daemon (`docker build`, `docker info`) **hangs and times out** — the Docker daemon is unresponsive
+  here. So compose is schema/interpolation-validated only. The CI `images` job and the owner's own
+  `docker compose up -d --build` are the first real build.
+
+### Phase 12 — Documentation
+
+- Rewrote `README.md` (quickstart, what a run does, scoring table, the work-auth rule, provider keys,
+  salary policy, local dev, layout) and added `docs/DEPLOYMENT.md` (service diagram, design decisions,
+  config, backups + the "a backup is useless without the same encryption key" warning, troubleshooting).
+- `docs/ARCHITECTURE.md` and `docs/DATABASE.md` already existed from Phases 1-2.
+
 ## Next steps
 
-1. Phase 9 (Angular Frontend): pin latest stable Angular, standalone components + signals, Material +
-   Tailwind, dark mode, lazy-loaded feature routes (dashboard, jobs/matches, profiles, resumes,
-   providers, settings, notifications, analytics), JWT interceptor + route guards, ApexCharts/AG Grid.
-   Per §17 the build is compile-checked at the phase gate only. Owner authorized autonomous progress.
-2. Then Phase 10 (Testing), 11 (Deployment: Dockerfiles/compose/CI — owner runs Docker), 12 (Docs).
+**All 12 phases are complete.** Remaining work is owner-side verification and polish:
+
+1. **Run the stack** — `cp .env.example .env`, fill the two secrets, `docker compose up -d --build`.
+   This is the first real Docker build (see the Phase 11 honesty note above); if the backend image
+   fails, the likely cause is a wheel missing for `linux/amd64` on Python 3.12 (local dev ran 3.13).
+2. **First smoke run** — register (first account = Admin) → create a profile with skills → add a
+   saved search → Dashboard → *Run pipeline*. Remotive needs no API key, so a run works with zero
+   credentials configured.
+3. **Not built (deliberately out of scope so far, all specced in CLAUDE.md):** résumé *parsing*
+   (upload + parse-status exist; text extraction from PDF/DOCX/LaTeX does not), per-role résumé
+   *tailoring* execution (LLM client + prompts exist, no endpoint wires it), the applications
+   tracker UI, and the analytics screen. The backend models for all of these already exist.
+4. **Revisit the Angular 19 pin** when Node is upgraded to ≥22 (see Phase 9 deviation).

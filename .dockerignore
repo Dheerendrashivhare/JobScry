@@ -1,0 +1,15 @@
+.git
+.github
+**/node_modules
+**/dist
+**/.angular
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+backend/var
+docs
+*.db
+*.sqlite*

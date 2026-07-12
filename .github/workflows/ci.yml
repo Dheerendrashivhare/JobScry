@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # 3.12 is the target runtime (CLAUDE.md §2) and matches the Docker image.
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Ruff
+        run: ruff check app tests
+
+      - name: isort
+        run: isort --check-only app tests
+
+      - name: Black
+        run: black --check --line-length 100 app tests
+
+      - name: Tests
+        # Suite runs on in-memory SQLite — no Postgres service needed.
+        run: pytest -q
+
+      - name: Migrations match the models
+        # Catches a model edited without a matching Alembic revision.
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci_check.db
+        run: |
+          alembic upgrade head
+          alembic check
+
+  frontend:
+    name: Frontend (tests + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 20: Angular is pinned to 19 for the owner's local toolchain
+          # (see PROGRESS.md, Phase 9 deviation). Keep these two in step.
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Tests
+        # Vitest + jsdom — no browser needed, so no Chrome setup step.
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  images:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t ajh-backend:ci ./backend
+
+      - name: Build frontend image
+        # Context is the repo root: the image needs frontend/ and infra/nginx/.
+        run: docker build -t ajh-web:ci -f frontend/Dockerfile .

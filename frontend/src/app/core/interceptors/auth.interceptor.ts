@@ -22,11 +22,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authorized).pipe(
     catchError((error: unknown) => {
-      const is401 = error instanceof HttpErrorResponse && error.status === 401;
-      const isAuthCall = req.url.includes('/auth/login') || req.url.includes('/auth/refresh');
+      if (!(error instanceof HttpErrorResponse) || error.status !== 401) {
+        return throwError(() => error);
+      }
 
-      if (!is401 || isAuthCall || !auth.refreshToken()) {
-        if (is401 && isAuthCall) auth.logout();
+      // A 401 from /auth/login or /auth/refresh IS the answer — not a signal to refresh.
+      // Don't log out here: on a failed login it would navigate away and wipe the error the
+      // user needs to read, and on a failed refresh it would double up with the handler below.
+      if (req.url.includes('/auth/login') || req.url.includes('/auth/refresh')) {
+        return throwError(() => error);
+      }
+
+      // A stale access token with nothing to refresh with would 401 forever.
+      if (!auth.refreshToken()) {
+        auth.logout();
         return throwError(() => error);
       }
 

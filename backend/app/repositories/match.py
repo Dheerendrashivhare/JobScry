@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Job, JobSkill, Match, SeenJob
+from app.models.enums import EligibilityStatus
 
 
 class MatchRepository:
@@ -36,6 +37,19 @@ class MatchRepository:
             .execution_options(populate_existing=True)
         )
         return result.scalars().unique().all()
+
+    async def fresh_for_profile(self, profile_id: int, limit: int) -> Sequence[Match]:
+        """Un-notified matches, actionable-now first, then best score (§7, §8)."""
+        actionable_first = case(
+            (Match.eligibility_status == EligibilityStatus.ACTIONABLE, 0), else_=1
+        )
+        result = await self.session.execute(
+            self._with_job()
+            .where(Match.profile_id == profile_id, Match.notified.is_(False))
+            .order_by(actionable_first, Match.score.desc(), Match.id.desc())
+            .limit(limit)
+        )
+        return result.scalars().all()
 
     async def list_for_profile(self, profile_id: int, limit: int, offset: int) -> Sequence[Match]:
         result = await self.session.execute(

@@ -12,8 +12,8 @@
 | 4 | Backend APIs | DONE (2026-07-11) | Profiles/skills, resumes, credentials(Fernet), settings, providers, searches; 41 tests pass |
 | 5 | Job Provider Framework | DONE (2026-07-11) | 8 adapters + registry + ingestion pipeline (dedup/expiry/salary); 60 tests pass |
 | 6 | AI Matching | DONE (2026-07-11) | Deterministic weighted scoring + gate + work-auth + LLM explanations; 81 tests pass |
-| 7 | Scheduler | not started | Celery + Redis |
-| 8 | Notifications | not started | Telegram + Email |
+| 7 | Scheduler | DONE (2026-07-11) | Celery + Redis, beat daily 03:00 UTC, per-user Redis lock; catch-up mode |
+| 8 | Notifications | DONE (2026-07-11) | Telegram + Email; top-20 fresh cap, no minimum, never repeat; 85 tests pass |
 | 9 | Angular Frontend | not started | Build-check at phase gate only |
 | 10 | Testing | not started | |
 | 11 | Deployment | not started | Owner runs Docker manually |
@@ -165,8 +165,36 @@
 - Tests: `test_matching_domain.py` (17, pure) + `test_matching.py` (4, ingest→score→list end-to-end).
   Full suite: **81 pass**.
 
+## Phases 7-8 notes (2026-07-11)
+
+- **Pipeline (§14):** `services/pipeline.py` chains search → normalize → expiry → dedup →
+  match → store → notify. The manual HTTP trigger and the Celery beat task call the *same*
+  `PipelineService`, so they can never drift. `POST /api/v1/profiles/{id}/run?mode=daily|catchup`
+  (catch-up widens the window to 7 days); `POST /api/v1/profiles/{id}/notify` sends only.
+- **Scheduler:** `scheduler/celery_app.py` (Celery + Redis, **not** APScheduler), beat fires
+  `ajh.dispatch_daily_pipelines` at 03:00 UTC, which fans out one `ajh.run_profile_pipeline`
+  per profile that has an active search (unconfigured profiles never trigger provider calls, §4).
+  Celery is sync, services are async → each task owns an `asyncio.run` loop, DB session and HTTP client.
+- **Per-user lock (§14):** `scheduler/locks.py` — Redis `SET NX EX`, released by a compare-and-delete
+  Lua script so an overrunning run can't delete a lock that now belongs to someone else. A task that
+  finds the lock held returns `{skipped: true}` rather than failing or retry-storming.
+- **Notifications (§13):** Telegram (Bot API) + Email (stdlib SMTP, run off the loop via
+  `asyncio.to_thread` — no new dep). A channel is only built when it's *enabled* AND its secret exists.
+- **The §7 rules live in `services/notification.py`, not the adapters:** cap = top 20 fresh matches,
+  **no minimum** (3 matches → 3 sent, never padded); actionable-now roles lead, eligibility-gated ones
+  follow and are labelled (§8); a match is marked notified **only after a channel actually accepted it**,
+  so a failed send retries next run instead of silently swallowing the job.
+- **Deliberate behaviour:** only jobs that *clear the gate* are persisted as matches, so below-gate jobs
+  are re-scored on each run. That's intentional — if the owner later adds a skill or retunes weights, a
+  previously-rejected job gets reconsidered instead of being buried forever.
+- Tests: `test_pipeline.py` (4) drives the whole chain over the ASGI app with Remotive **and** the
+  Telegram Bot API served by an httpx `MockTransport` — gate enforcement, honest counts, never-repeat,
+  and "no notifier configured still scores". Full suite: **85 pass**. `alembic check` reports no drift.
+
 ## Next steps
 
-1. Phase 7 (Scheduler): Celery + Redis, per-user lock, daily (24h) + catch-up (3-7d) windows, chaining
-   the existing ingestion → matching services. Then Phase 8 (Notifications: Telegram + Email, top-20
-   fresh cap, never repeat). Owner authorized autonomous progress.
+1. Phase 9 (Angular Frontend): pin latest stable Angular, standalone components + signals, Material +
+   Tailwind, dark mode, lazy-loaded feature routes (dashboard, jobs/matches, profiles, resumes,
+   providers, settings, notifications, analytics), JWT interceptor + route guards, ApexCharts/AG Grid.
+   Per §17 the build is compile-checked at the phase gate only. Owner authorized autonomous progress.
+2. Then Phase 10 (Testing), 11 (Deployment: Dockerfiles/compose/CI — owner runs Docker), 12 (Docs).

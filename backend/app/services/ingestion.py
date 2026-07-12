@@ -49,7 +49,10 @@ class IngestionService:
         self.profiles = ProfileRepository(session)
         self.providers_repo = ProviderRepository(session)
 
-    async def run_profile(self, user_id: int, profile_id: int) -> IngestionResult:
+    async def run_profile(
+        self, user_id: int, profile_id: int, mode: SearchMode | None = None
+    ) -> IngestionResult:
+        """``mode`` overrides each search's own window — that's the catch-up run (§14)."""
         profile = await self.profiles.get_for_user(profile_id, user_id)
         if profile is None:
             raise ProfileNotFoundError()
@@ -68,7 +71,7 @@ class IngestionService:
         now = datetime.now(UTC)
 
         for search in searches:
-            query = self._build_query(search, profile, now)
+            query = self._build_query(search, profile, now, mode)
             if search.provider_slug is not None:
                 targets = [by_slug[search.provider_slug]] if search.provider_slug in by_slug else []
             else:
@@ -110,7 +113,9 @@ class IngestionService:
             ],
         )
 
-    def _build_query(self, search: Any, profile: Profile, now: datetime) -> SearchQuery:
+    def _build_query(
+        self, search: Any, profile: Profile, now: datetime, mode: SearchMode | None = None
+    ) -> SearchQuery:
         params = dict(search.params or {})
         keywords = (
             _as_list(params.get("keywords"))
@@ -118,7 +123,7 @@ class IngestionService:
             or list(profile.target_roles)
         )
         locations = _as_list(params.get("locationSearch")) or list(profile.locations)
-        window = _WINDOW_DAYS.get(search.mode, 1)
+        window = _WINDOW_DAYS.get(mode or search.mode, 1)
         remote = any("remote" in str(m).lower() for m in profile.work_modes) or None
         return SearchQuery(
             keywords=keywords,

@@ -1,0 +1,51 @@
+<mat-sidenav-container class="h-screen">
+  <mat-sidenav mode="side" opened class="w-60 border-0">
+    <div class="p-4">
+      <div class="text-xl font-semibold">{{ 'app.name' | translate }}</div>
+      <div class="text-xs opacity-60">{{ 'app.tagline' | translate }}</div>
+    </div>
+
+    <mat-nav-list>
+      @for (item of nav; track item.path) {
+        @if (visible(item)) {
+          <a
+            mat-list-item
+            [routerLink]="item.path"
+            routerLinkActive
+            #rla="routerLinkActive"
+            [activated]="rla.isActive"
+          >
+            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ item.label | translate }}</span>
+          </a>
+        }
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="flex flex-col">
+    <mat-toolbar class="flex items-center gap-2">
+      <span class="flex-1"></span>
+
+      <button
+        mat-icon-button
+        (click)="themeService.toggle()"
+        [matTooltip]="(themeService.theme() === 'dark' ? 'app.toLight' : 'app.toDark') | translate"
+      >
+        <mat-icon>{{ themeService.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+
+      @if (user(); as u) {
+        <span class="text-sm opacity-70">{{ u.email }}</span>
+      }
+
+      <button mat-icon-button (click)="logout()" [matTooltip]="'app.signOut' | translate">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <main class="flex-1 overflow-auto p-6">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

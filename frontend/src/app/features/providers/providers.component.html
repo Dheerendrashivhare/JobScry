@@ -1,0 +1,44 @@
+<h1 class="mb-6 text-2xl font-semibold">Providers</h1>
+
+<p class="mb-4 text-sm opacity-70">
+  A provider only runs for you once its API keys are saved in Settings. Remotive and
+  Greenhouse/Lever need none, so they are always available.
+</p>
+
+<div class="grid gap-4 md:grid-cols-2">
+  @for (p of providers(); track p.slug) {
+    <mat-card class="p-4">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-medium">{{ p.display_name }}</span>
+            @if (p.is_apify) {
+              <mat-chip class="text-xs">Apify</mat-chip>
+            }
+          </div>
+
+          <div class="mt-1 flex items-center gap-1 text-sm opacity-70">
+            <mat-icon class="!h-4 !w-4 !text-base">
+              {{ p.last_health_status === 'healthy' ? 'check_circle' : p.last_health_status === 'unhealthy' ? 'error' : 'help' }}
+            </mat-icon>
+            {{ p.last_health_status }}
+          </div>
+
+          <div class="mt-2 flex flex-wrap gap-1">
+            @for (c of p.requires_credentials; track c) {
+              <mat-chip class="text-xs">{{ c }}</mat-chip>
+            } @empty {
+              <span class="text-xs opacity-60">No credentials required</span>
+            }
+          </div>
+        </div>
+
+        <mat-slide-toggle
+          [checked]="p.is_active"
+          [disabled]="!isAdmin()"
+          (change)="toggle(p, $event.checked)"
+        />
+      </div>
+    </mat-card>
+  }
+</div>

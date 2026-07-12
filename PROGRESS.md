@@ -14,7 +14,7 @@
 | 6 | AI Matching | DONE (2026-07-11) | Deterministic weighted scoring + gate + work-auth + LLM explanations; 81 tests pass |
 | 7 | Scheduler | DONE (2026-07-11) | Celery + Redis, beat daily 03:00 UTC, per-user Redis lock; catch-up mode |
 | 8 | Notifications | DONE (2026-07-11) | Telegram + Email; top-20 fresh cap, no minimum, never repeat; 85 tests pass |
-| 9 | Angular Frontend | not started | Build-check at phase gate only |
+| 9 | Angular Frontend | DONE (2026-07-12) | Angular 19 (see deviation), Material+Tailwind, dark mode, lazy routes, JWT interceptor; `ng build` clean |
 | 10 | Testing | not started | |
 | 11 | Deployment | not started | Owner runs Docker manually |
 | 12 | Documentation | not started | |
@@ -190,6 +190,32 @@
 - Tests: `test_pipeline.py` (4) drives the whole chain over the ASGI app with Remotive **and** the
   Telegram Bot API served by an httpx `MockTransport` — gate enforcement, honest counts, never-repeat,
   and "no notifier configured still scores". Full suite: **85 pass**. `alembic check` reports no drift.
+
+## Phase 9 notes (2026-07-12)
+
+- **DEVIATION from §2 ("pin latest stable"), owner-approved 2026-07-12:** pinned **Angular 19.2.27**,
+  not the latest (22.0.6). Latest Angular requires Node ≥22.22.3; the owner's machine runs Node 20.11.1,
+  and Angular 19 is the newest line whose engine range includes ^20.11.1 exactly. Owner chose "pin
+  Angular 19, keep Node 20" over upgrading Node or building only in Docker. Revisit when Node is upgraded.
+- Also pinned for Angular-19 peer compatibility: `ng-apexcharts@1.15.0` (2.x demands Angular ≥20),
+  `ag-grid@33`, `@ngx-translate@16`, `tailwindcss@3`. No `--force`/`--legacy-peer-deps` anywhere —
+  the dependency graph resolves cleanly.
+- Standalone components + signals + lazy-loaded routes (§3). `core/` holds models, `ApiService`
+  (one typed client for the whole backend), `AuthService`, `ThemeService`, the JWT interceptor and guards.
+- **JWT interceptor** attaches the token and transparently refreshes on a 401 — concurrent 401s queue on
+  the single in-flight refresh instead of each firing their own and racing each other into a logout.
+- **Dark mode (required, §2)** is the default: one `dark` class on `<html>` drives both Material's system
+  tokens and Tailwind's `dark:` variants, so a single toggle flips everything. Tailwind preflight is off
+  so it doesn't fight Material's reset.
+- **No CORS layer needed on the backend:** the API base is the relative `/api/v1`; `ng serve` proxies via
+  `proxy.conf.json` and Nginx does the same in production.
+- Screens wired to the real API: login/register (first account = Admin), dashboard (profile picker,
+  daily/catch-up pipeline runner, ApexCharts breakdown, per-provider health), matches (AG Grid, with the
+  eligibility-gated column called out), profiles, providers (admin-only toggles), settings (LLM provider/model,
+  Telegram/email, encrypted API keys shown masked), admin (user list). ngx-translate wired via `public/i18n/en.json`.
+- Gate check (§17): `ng build` **exit 0, no errors**, 579 kB initial. Bundle budget raised to 1.5 MB —
+  AG Grid + ApexCharts + Material legitimately exceed the 500 kB default. Remaining Sass deprecation
+  warnings come from Angular Material's own theme mixin, not our code.
 
 ## Next steps
 

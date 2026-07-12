@@ -1,0 +1,105 @@
+<h1 class="mb-6 text-2xl font-semibold">Settings</h1>
+
+<div class="grid gap-6 lg:grid-cols-2">
+  <mat-card class="p-6">
+    <h2 class="mb-1 font-medium">AI &amp; notifications</h2>
+    <p class="mb-4 text-sm opacity-70">
+      Scoring always works. An LLM key only adds match explanations and résumé tailoring —
+      without one, those are simply off.
+    </p>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-4">
+      <mat-form-field>
+        <mat-label>LLM provider</mat-label>
+        <mat-select formControlName="llm_provider">
+          <mat-option [value]="null">None (scoring only)</mat-option>
+          <mat-option value="anthropic">Anthropic</mat-option>
+          <mat-option value="openai">OpenAI</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Model (optional)</mat-label>
+        <input matInput formControlName="llm_model" placeholder="claude-opus-4-8" />
+        <mat-hint>Leave blank to use the provider default</mat-hint>
+      </mat-form-field>
+
+      <mat-slide-toggle formControlName="telegram_enabled">Telegram</mat-slide-toggle>
+      <mat-form-field>
+        <mat-label>Telegram chat ID</mat-label>
+        <input matInput formControlName="telegram_chat_id" />
+      </mat-form-field>
+
+      <mat-slide-toggle formControlName="email_enabled">Email</mat-slide-toggle>
+      <mat-form-field>
+        <mat-label>Notify email</mat-label>
+        <input matInput type="email" formControlName="notify_email" />
+      </mat-form-field>
+
+      <div class="grid grid-cols-3 gap-4">
+        <mat-form-field class="col-span-2">
+          <mat-label>SMTP host</mat-label>
+          <input matInput formControlName="smtp_host" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Port</mat-label>
+          <input matInput type="number" formControlName="smtp_port" />
+        </mat-form-field>
+      </div>
+
+      <mat-form-field>
+        <mat-label>SMTP username</mat-label>
+        <input matInput formControlName="smtp_username" />
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Notification cap per run</mat-label>
+        <input matInput type="number" formControlName="notify_cap" />
+        <mat-hint>Top-N fresh matches. There is no minimum — an empty run sends nothing.</mat-hint>
+      </mat-form-field>
+
+      <button mat-flat-button type="submit" [disabled]="saving()">Save settings</button>
+    </form>
+  </mat-card>
+
+  <mat-card class="p-6">
+    <h2 class="mb-1 font-medium">API keys</h2>
+    <p class="mb-4 text-sm opacity-70">
+      Stored encrypted (Fernet). They are never sent back to the browser — only a masked hint.
+    </p>
+
+    <form [formGroup]="credentialForm" (ngSubmit)="saveCredential()" class="flex flex-col gap-4">
+      <mat-form-field>
+        <mat-label>Key</mat-label>
+        <mat-select formControlName="key">
+          @for (k of credentialKeys; track k) {
+            <mat-option [value]="k">{{ k }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Value</mat-label>
+        <input matInput type="password" formControlName="value" autocomplete="off" />
+      </mat-form-field>
+
+      <button mat-flat-button type="submit">Store key</button>
+    </form>
+
+    <div class="mt-6 flex flex-col gap-2">
+      @for (c of credentials(); track c.key) {
+        <div class="flex items-center justify-between rounded p-2" style="background: var(--mat-sys-surface-container)">
+          <div>
+            <div class="text-sm font-medium">{{ c.key }}</div>
+            <div class="font-mono text-xs opacity-70">{{ c.masked_value }}</div>
+          </div>
+          <button mat-icon-button (click)="deleteCredential(c.key)" aria-label="Delete key">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      } @empty {
+        <p class="text-sm opacity-60">No keys stored yet.</p>
+      }
+    </div>
+  </mat-card>
+</div>

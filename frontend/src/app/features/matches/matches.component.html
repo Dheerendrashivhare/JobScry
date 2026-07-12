@@ -1,0 +1,30 @@
+<h1 class="mb-6 text-2xl font-semibold">Matches</h1>
+
+<mat-card class="mb-4 p-4">
+  <mat-form-field class="min-w-64">
+    <mat-label>Profile</mat-label>
+    <mat-select [ngModel]="selectedId()" (ngModelChange)="onProfileChange($event)">
+      @for (p of profiles(); track p.id) {
+        <mat-option [value]="p.id">{{ p.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <p class="text-sm opacity-70">
+    Only jobs that scored at or above your gate are stored. A short list of true fits beats a
+    padded list of stretches.
+  </p>
+</mat-card>
+
+@if (matches().length === 0 && !loading()) {
+  <mat-card class="p-6">
+    <p>No matches yet. Run the pipeline from the Dashboard.</p>
+  </mat-card>
+} @else {
+  <ag-grid-angular
+    class="ag-theme-quartz h-[600px] w-full"
+    [rowData]="matches()"
+    [columnDefs]="columns"
+    [gridOptions]="gridOptions"
+  />
+}

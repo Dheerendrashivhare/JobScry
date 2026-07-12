@@ -1,0 +1,17 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "matches": "Matches",
+    "profiles": "Profiles",
+    "providers": "Providers",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "app": {
+    "name": "AJH",
+    "tagline": "AI Job Hunter",
+    "signOut": "Sign out",
+    "toLight": "Switch to light",
+    "toDark": "Switch to dark"
+  }
+}

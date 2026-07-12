@@ -1,0 +1,95 @@
+<h1 class="mb-6 text-2xl font-semibold">Dashboard</h1>
+
+@if (profiles().length === 0) {
+  <mat-card class="p-6">
+    <p class="mb-4">
+      No profile yet. A run needs a profile with skills and at least one saved search —
+      otherwise there is nothing to search for.
+    </p>
+    <a mat-flat-button routerLink="/profiles">Create a profile</a>
+  </mat-card>
+} @else {
+  <mat-card class="mb-6 p-6">
+    <div class="flex flex-wrap items-center gap-4">
+      <mat-form-field class="min-w-64">
+        <mat-label>Profile</mat-label>
+        <mat-select [ngModel]="selectedId()" (ngModelChange)="selectedId.set($event)">
+          @for (p of profiles(); track p.id) {
+            <mat-option [value]="p.id">{{ p.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-button-toggle-group [(ngModel)]="mode" aria-label="Run window">
+        <mat-button-toggle value="daily">Daily (24h)</mat-button-toggle>
+        <mat-button-toggle value="catchup">Catch-up (7d)</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <button mat-flat-button (click)="run()" [disabled]="running()">
+        <mat-icon>play_arrow</mat-icon>
+        Run pipeline
+      </button>
+    </div>
+
+    @if (running()) {
+      <mat-progress-bar class="mt-4" mode="indeterminate" />
+      <p class="mt-2 text-sm opacity-70">
+        Searching providers, deduplicating, scoring, and notifying…
+      </p>
+    }
+  </mat-card>
+
+  @if (result(); as r) {
+    <div class="mb-6 grid gap-4 md:grid-cols-4">
+      <mat-card class="p-4">
+        <div class="text-3xl font-semibold">{{ r.ingestion.new_jobs }}</div>
+        <div class="text-sm opacity-70">New jobs</div>
+      </mat-card>
+      <mat-card class="p-4">
+        <div class="text-3xl font-semibold">{{ r.matching.qualified }}</div>
+        <div class="text-sm opacity-70">Qualified (≥ gate)</div>
+      </mat-card>
+      <mat-card class="p-4">
+        <div class="text-3xl font-semibold">{{ r.matching.eligibility_gated }}</div>
+        <div class="text-sm opacity-70">Eligibility-gated</div>
+      </mat-card>
+      <mat-card class="p-4">
+        <div class="text-3xl font-semibold">{{ r.notification.selected }}</div>
+        <div class="text-sm opacity-70">Notified</div>
+      </mat-card>
+    </div>
+
+    <mat-card class="mb-6 p-4">
+      <apx-chart
+        [series]="series()"
+        [chart]="chart"
+        [plotOptions]="plotOptions"
+        [dataLabels]="dataLabels"
+        [legend]="legend"
+        [xaxis]="xaxis"
+        [theme]="theme"
+      />
+    </mat-card>
+
+    <mat-card class="p-4">
+      <h2 class="mb-2 font-medium">Providers this run</h2>
+      @for (p of r.ingestion.providers; track p.provider) {
+        <div class="flex items-center gap-2 py-1 text-sm">
+          <mat-icon [style.color]="p.healthy ? 'var(--mat-sys-primary)' : 'var(--mat-sys-error)'">
+            {{ p.healthy ? 'check_circle' : 'error' }}
+          </mat-icon>
+          <span class="w-48">{{ p.provider }}</span>
+          <span class="opacity-70">{{ p.fetched }} fetched</span>
+          @if (p.error) {
+            <span class="opacity-70">— {{ p.error }}</span>
+          }
+        </div>
+      } @empty {
+        <p class="text-sm opacity-70">
+          No provider ran. Add a saved search, and add API keys in Settings for the
+          providers that need them.
+        </p>
+      }
+    </mat-card>
+  }
+}

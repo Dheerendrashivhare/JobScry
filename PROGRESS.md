@@ -4,20 +4,20 @@
 
 ## Phase status
 
-| # | Phase | Status | Notes |
-|---|-------|--------|-------|
-| 1 | Architecture | DONE (2026-07-10) | Scaffold + ARCHITECTURE.md + bootable skeleton; smoke test passing; awaiting owner approval |
-| 2 | Database | DONE (2026-07-11) | 15 SQLAlchemy models + Alembic initial migration; model tests pass; ER diagram; awaiting owner approval |
-| 3 | Authentication | DONE (2026-07-11) | Email+JWT (access+refresh), first-user=Admin, RBAC; 24 tests pass; live-run verified |
-| 4 | Backend APIs | DONE (2026-07-11) | Profiles/skills, resumes, credentials(Fernet), settings, providers, searches; 41 tests pass |
-| 5 | Job Provider Framework | DONE (2026-07-11) | 8 adapters + registry + ingestion pipeline (dedup/expiry/salary); 60 tests pass |
-| 6 | AI Matching | DONE (2026-07-11) | Deterministic weighted scoring + gate + work-auth + LLM explanations; 81 tests pass |
-| 7 | Scheduler | DONE (2026-07-11) | Celery + Redis, beat daily 03:00 UTC, per-user Redis lock; catch-up mode |
-| 8 | Notifications | DONE (2026-07-11) | Telegram + Email; top-20 fresh cap, no minimum, never repeat; 85 tests pass |
-| 9 | Angular Frontend | DONE (2026-07-12) | Angular 19 (see deviation), Material+Tailwind, dark mode, lazy routes, JWT interceptor; `ng build` clean |
-| 10 | Testing | DONE (2026-07-12) | Backend 85 (pytest) + frontend 19 (Vitest/jsdom) = **104**; found + fixed a real interceptor bug |
-| 11 | Deployment | DONE (2026-07-12) | Dockerfiles, 6-service compose, Nginx, CI. **Images NOT built locally — Docker daemon unresponsive here** |
-| 12 | Documentation | DONE (2026-07-12) | README, docs/DEPLOYMENT.md (+ existing ARCHITECTURE.md, DATABASE.md) |
+| #  | Phase                  | Status            | Notes                                                                                                           |
+| -- | ---------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| 1  | Architecture           | DONE (2026-07-10) | Scaffold + ARCHITECTURE.md + bootable skeleton; smoke test passing; awaiting owner approval                     |
+| 2  | Database               | DONE (2026-07-11) | 15 SQLAlchemy models + Alembic initial migration; model tests pass; ER diagram; awaiting owner approval         |
+| 3  | Authentication         | DONE (2026-07-11) | Email+JWT (access+refresh), first-user=Admin, RBAC; 24 tests pass; live-run verified                            |
+| 4  | Backend APIs           | DONE (2026-07-11) | Profiles/skills, resumes, credentials(Fernet), settings, providers, searches; 41 tests pass                     |
+| 5  | Job Provider Framework | DONE (2026-07-11) | 8 adapters + registry + ingestion pipeline (dedup/expiry/salary); 60 tests pass                                 |
+| 6  | AI Matching            | DONE (2026-07-11) | Deterministic weighted scoring + gate + work-auth + LLM explanations; 81 tests pass                             |
+| 7  | Scheduler              | DONE (2026-07-11) | Celery + Redis, beat daily 03:00 UTC, per-user Redis lock; catch-up mode                                        |
+| 8  | Notifications          | DONE (2026-07-11) | Telegram + Email; top-20 fresh cap, no minimum, never repeat; 85 tests pass                                     |
+| 9  | Angular Frontend       | DONE (2026-07-12) | Angular 19 (see deviation), Material+Tailwind, dark mode, lazy routes, JWT interceptor;`ng build` clean       |
+| 10 | Testing                | DONE (2026-07-12) | Backend 85 (pytest) + frontend 19 (Vitest/jsdom) =**104**; found + fixed a real interceptor bug           |
+| 11 | Deployment             | DONE (2026-07-12) | Dockerfiles, 6-service compose, Nginx, CI.**Images NOT built locally — Docker daemon unresponsive here** |
+| 12 | Documentation          | DONE (2026-07-12) | README, docs/DEPLOYMENT.md (+ existing ARCHITECTURE.md, DATABASE.md)                                            |
 
 ## Key decisions log (2026-07-10)
 
@@ -281,3 +281,7 @@
    *tailoring* execution (LLM client + prompts exist, no endpoint wires it), the applications
    tracker UI, and the analytics screen. The backend models for all of these already exist.
 4. **Revisit the Angular 19 pin** when Node is upgraded to ≥22 (see Phase 9 deviation).
+
+```bash
+cp .env.example .env
+```

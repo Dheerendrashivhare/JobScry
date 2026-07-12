@@ -85,9 +85,26 @@ def test_experience_mismatch_penalised() -> None:
     assert result.score < 95
 
 
-def test_unstated_experience_is_neutral_not_free() -> None:
+def test_unstated_experience_is_dropped_not_guessed() -> None:
+    """A requirement the posting never states can't be failed — so don't score it."""
     result = score_job(_input(job_text="Python FastAPI PostgreSQL. Great team."))
-    assert result.components["experience"] == 70
+
+    assert "experience" not in result.components
+    # The remaining weights are renormalized rather than diluted by a guessed number.
+    assert result.components["tech_stack"] == 100
+
+
+def test_perfect_job_still_qualifies_when_experience_is_unstated() -> None:
+    """Regression: a neutral 70 for unstated experience capped an otherwise-perfect job
+    at 89 — one point below the gate — so it could never qualify however well it fit."""
+    result = score_job(
+        _input(job_text="We want Python, FastAPI and PostgreSQL. Great team, remote-friendly.")
+    )
+
+    assert result.components["tech_stack"] == 100
+    assert result.components["role"] == 100
+    assert result.score >= 90, f"perfect fit scored {result.score} — the gate is unreachable"
+    assert result.qualified is True
 
 
 def test_ignored_company_zeroes_domain() -> None:

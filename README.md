@@ -32,9 +32,9 @@ Then:
 docker compose up -d --build
 ```
 
-| URL | What |
-|---|---|
-| http://localhost:8080 | The app |
+| URL                        | What               |
+| -------------------------- | ------------------ |
+| http://localhost:8080      | The app            |
 | http://localhost:8000/docs | API docs (OpenAPI) |
 
 **The first account you register becomes the Admin.** Open the app, create it, then:
@@ -68,13 +68,13 @@ window from 24 hours to 7 days.
 
 ## How scoring works
 
-| Dimension | Weight |
-|---|---|
-| Tech-stack match | 40 |
-| Experience match | 20 |
-| Role match | 20 |
-| Domain / company fit | 10 |
-| Source quality + direct-apply trust | 10 |
+| Dimension                           | Weight |
+| ----------------------------------- | ------ |
+| Tech-stack match                    | 40     |
+| Experience match                    | 20     |
+| Role match                          | 20     |
+| Domain / company fit                | 10     |
+| Source quality + direct-apply trust | 10     |
 
 Weights are per-profile and editable. **Gate at ≥ 90**: 95–100 High · 92–94 Medium-High ·
 90–91 Stretch. Anything below 90 is not stored as a match.
@@ -102,16 +102,16 @@ on walls that won't move.
 
 ## Providers
 
-| Provider | Needs a key |
-|---|---|
-| Remotive | — |
-| Greenhouse / Lever boards | — |
-| Adzuna | `adzuna_app_id`, `adzuna_app_key` |
-| Jooble | `jooble_key` |
-| JSearch | `rapidapi_key` |
-| Google Jobs | `serpapi_key` |
-| LinkedIn (Apify) | `apify_token` |
-| Naukri (Apify) | `apify_token` |
+| Provider                  | Needs a key                           |
+| ------------------------- | ------------------------------------- |
+| Remotive                  | —                                    |
+| Greenhouse / Lever boards | —                                    |
+| Adzuna                    | `adzuna_app_id`, `adzuna_app_key` |
+| Jooble                    | `jooble_key`                        |
+| JSearch                   | `rapidapi_key`                      |
+| Google Jobs               | `serpapi_key`                       |
+| LinkedIn (Apify)          | `apify_token`                       |
+| Naukri (Apify)            | `apify_token`                       |
 
 A provider only runs for you once its keys are stored. Failures are isolated: a provider that
 times out is retried once, marked unhealthy, and the run continues without it.
@@ -141,7 +141,7 @@ a misleading LPA figure.
 ```bash
 cd backend
 pip install -e ".[dev]"
-pytest -q                    # 85 tests; no database needed (in-memory SQLite)
+pytest -q                    # 86 tests; no database needed (in-memory SQLite)
 uvicorn app.main:app --reload
 ```
 
@@ -182,7 +182,8 @@ alembic check                # fails if a model drifted from the migrations
 
 Diagrams and the ER model: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) ·
 [`docs/DATABASE.md`](docs/DATABASE.md). Deployment detail: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
-Build history and decisions (including deviations): [`PROGRESS.md`](PROGRESS.md).
+**Full handbook** (architecture, all diagrams, libraries, AI setup, deploy, how to change things):
+[`docs/HANDBOOK.md`](docs/HANDBOOK.md). Build history and deviations: [`PROGRESS.md`](PROGRESS.md).
 
 ## Project layout
 
@@ -196,7 +197,7 @@ backend/
     repositories/  SQLAlchemy data access
     scheduler/     Celery app, tasks, per-user Redis lock
   alembic/         migrations
-  tests/           85 tests
+  tests/           86 tests
 frontend/          Angular 19 SPA
 infra/nginx/       reverse proxy (serves the SPA, proxies /api)
 docs/              architecture, database, deployment

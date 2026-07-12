@@ -42,13 +42,9 @@ Clean Architecture — Presentation / Application / Domain / Infrastructure.
 No business logic in controllers/components. SOLID, Repository Pattern, Service Layer, DTOs,
 DI, async where appropriate.
 
-**Frontend structure:** `src/app/{core, shared, layout, auth, dashboard, jobs, profiles,
-resumes, providers, analytics, applications, notifications, settings, admin, ai, store,
-services, guards, interceptors, directives, pipes, models, utils}` — lazy-loaded feature routes.
+**Frontend structure:** `src/app/{core, shared, layout, auth, dashboard, jobs, profiles, resumes, providers, analytics, applications, notifications, settings, admin, ai, store, services, guards, interceptors, directives, pipes, models, utils}` — lazy-loaded feature routes.
 
-**Backend structure:** `backend/app/{api, auth, users, profiles, jobs, providers, matching,
-resumes, applications, notifications, analytics, scheduler, admin, services, repositories,
-models, schemas, database, core, tests}`.
+**Backend structure:** `backend/app/{api, auth, users, profiles, jobs, providers, matching, resumes, applications, notifications, analytics, scheduler, admin, services, repositories, models, schemas, database, core, tests}`.
 
 ---
 
@@ -75,6 +71,7 @@ Greenhouse & Lever boards, Google Jobs via SerpAPI.
 **Apify connector (enabled when user supplies an Apify API key in Settings):**
 Backend calls Apify **REST API directly** with the user's key (the "MCP-only / REST blocked"
 constraint applied to Claude chat sessions, not to this backend — resolved).
+
 - **LinkedIn:** actor `fantastic-jobs/advanced-linkedin-job-search-api` — supports
   `datePostedAfter`, `titleSearch`, `descriptionSearch`, `locationSearch`,
   `aiExperienceLevelFilter`, `removeAgency`, `populateExternalApplyURL`; exposes
@@ -85,6 +82,7 @@ constraint applied to Claude chat sessions, not to this backend — resolved).
 - Indeed and others may be added later via additional Apify actors.
 
 **Proven LinkedIn query recipe (ships as the owner's default saved search template):**
+
 - `titleSearch`: ["Backend Engineer","Backend Developer","Python Developer","Software Engineer","Software Developer"]
 - `descriptionSearch`: ["Python","FastAPI"] — broad-title + tech-in-description combo massively
   out-performs narrow queries.
@@ -93,6 +91,7 @@ constraint applied to Claude chat sessions, not to this backend — resolved).
 - Daily mode: `datePostedAfter` = last 24 h. Catch-up: last 3–7 days.
 
 **Portal-tuning learnings:**
+
 - Naukri: search "FastAPI Backend Developer" / "Python Backend Developer" — NEVER bare
   "Python" (floods with AI/ML-trainer and data-science roles).
 - Big enterprises dominate raw volume (Infosys, TCS, Accenture, Cognizant, Qualcomm…).
@@ -123,13 +122,13 @@ best-effort — some expired jobs may slip through (accepted).
 
 Weights (per-profile configurable; owner's defaults):
 
-| Dimension | Weight |
-|---|---|
-| Tech-stack match (Python + FastAPI + Mongo/SQL) | 40 |
-| Experience match (2–5 yrs) | 20 |
-| Role match (backend/API/platform) | 20 |
-| Domain/company fit | 10 |
-| Source quality + direct-apply trust | 10 |
+| Dimension                                       | Weight |
+| ----------------------------------------------- | ------ |
+| Tech-stack match (Python + FastAPI + Mongo/SQL) | 40     |
+| Experience match (2–5 yrs)                     | 20     |
+| Role match (backend/API/platform)               | 20     |
+| Domain/company fit                              | 10     |
+| Source quality + direct-apply trust             | 10     |
 
 Bands: 95–100 High · 92–94 Medium-High · 90–91 Stretch. **Gate at ≥90.**
 
@@ -137,6 +136,7 @@ Output per match: score, explanation, strengths, missing skills, recommendation,
 suggested/tailored resume.
 
 **Integrity rules (hard):**
+
 - NEVER inflate a score to reach a target count. If a run yields 6 qualified, report 6 and
   explain what excluded the rest. Accuracy over quantity.
 - Reality: a fresh window normally yields 4–10 genuine ≥90 matches; >95 appears ~1–2×/week.
@@ -241,8 +241,8 @@ iterative dev.
 ## 18. Build Plan (never generate the whole app at once)
 
 1. Architecture · 2. Database · 3. Authentication · 4. Backend APIs ·
-5. Job Provider Framework · 6. AI Matching · 7. Scheduler · 8. Notifications ·
-9. Angular Frontend · 10. Testing · 11. Deployment · 12. Documentation
+2. Job Provider Framework · 6. AI Matching · 7. Scheduler · 8. Notifications ·
+3. Angular Frontend · 10. Testing · 11. Deployment · 12. Documentation
 
 After each phase: verify compilation, verify tests, explain architecture decisions,
 **wait for owner approval before continuing**. Never skip files, APIs, tests, or docs.

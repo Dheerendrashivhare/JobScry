@@ -120,10 +120,11 @@ def _score_tech_stack(data: ScoreInput, text: str) -> tuple[int, list[str], list
     return round(100 * matched_weight / total_weight), matched, missing
 
 
-def _score_experience(data: ScoreInput, text: str) -> int:
+def _score_experience(data: ScoreInput, text: str) -> int | None:
+    """None when the posting never states a requirement — see score_job()."""
     low, high = parse_required_years(text)
     if low is None:
-        return 70  # unstated — can't verify, don't reward or punish hard
+        return None
 
     candidate_min = data.experience_min_years
     candidate_max = data.experience_max_years if data.experience_max_years else 60
@@ -178,17 +179,28 @@ def _score_source(data: ScoreInput) -> int:
 
 
 def score_job(data: ScoreInput, min_score: int = 90) -> ScoreResult:
-    """Score a job for a profile. Never inflates — a low score stays low (§7)."""
+    """Score a job for a profile. Never inflates — a low score stays low (§7).
+
+    Dimensions we cannot assess are **dropped and the remaining weights renormalized**,
+    rather than filled in with a guessed "neutral" number. That matters: scoring an
+    unstated experience requirement as a neutral 70 used to cap an otherwise-perfect job
+    at 89 — one point under the gate — so a posting that simply didn't mention years
+    could never qualify however well it fit. You can't fail a requirement nobody stated.
+    """
     text = f"{data.job_title} {data.job_text}".lower()
 
     tech, matched, missing = _score_tech_stack(data, text)
-    components = {
+    experience = _score_experience(data, text)
+
+    components: dict[str, int] = {
         "tech_stack": tech,
-        "experience": _score_experience(data, text),
         "role": _score_role(data),
         "domain": _score_domain(data),
         "source_quality": _score_source(data),
     }
+    # Absent from the breakdown = "the posting never said", not "scored zero".
+    if experience is not None:
+        components["experience"] = experience
 
     total_weight = sum(data.weights.get(k, 0) for k in components)
     if total_weight <= 0:

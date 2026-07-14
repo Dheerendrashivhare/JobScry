@@ -13,7 +13,7 @@
     <div class="flex flex-wrap items-center gap-4">
       <mat-form-field class="min-w-64">
         <mat-label>Profile</mat-label>
-        <mat-select [ngModel]="selectedId()" (ngModelChange)="selectedId.set($event)">
+        <mat-select [ngModel]="selectedId()" (ngModelChange)="onProfileChange($event)">
           @for (p of profiles(); track p.id) {
             <mat-option [value]="p.id">{{ p.name }}</mat-option>
           }
@@ -30,6 +30,17 @@
         Run pipeline
       </button>
     </div>
+
+    @if (searchCount() === 0) {
+      <div class="mt-4 rounded p-3" style="background: var(--mat-sys-error-container)">
+        <p class="font-medium">This profile has no saved search.</p>
+        <p class="mb-2 text-sm">
+          A profile says <em>what</em> you want; a search says <em>where to look</em>. Without one
+          the run has nowhere to go — it will report <code>searches_run: 0</code> and find nothing.
+        </p>
+        <a mat-flat-button routerLink="/searches">Add a search</a>
+      </div>
+    }
 
     @if (running()) {
       <mat-progress-bar class="mt-4" mode="indeterminate" />

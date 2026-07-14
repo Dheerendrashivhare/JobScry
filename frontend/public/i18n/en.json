@@ -5,7 +5,8 @@
     "profiles": "Profiles",
     "providers": "Providers",
     "settings": "Settings",
-    "admin": "Admin"
+    "admin": "Admin",
+    "searches": "Searches"
   },
   "app": {
     "name": "AJH",

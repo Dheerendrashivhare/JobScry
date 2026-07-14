@@ -26,6 +26,11 @@ export const routes: Routes = [
           import('./features/matches/matches.component').then((m) => m.MatchesComponent),
       },
       {
+        path: 'searches',
+        loadComponent: () =>
+          import('./features/searches/searches.component').then((m) => m.SearchesComponent),
+      },
+      {
         path: 'profiles',
         loadComponent: () =>
           import('./features/profiles/profiles.component').then((m) => m.ProfilesComponent),

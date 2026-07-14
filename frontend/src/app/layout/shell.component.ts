@@ -47,6 +47,7 @@ export class ShellComponent implements OnInit {
     { path: '/dashboard', label: 'nav.dashboard', icon: 'dashboard' },
     { path: '/matches', label: 'nav.matches', icon: 'work' },
     { path: '/profiles', label: 'nav.profiles', icon: 'person' },
+    { path: '/searches', label: 'nav.searches', icon: 'travel_explore' },
     { path: '/providers', label: 'nav.providers', icon: 'hub' },
     { path: '/settings', label: 'nav.settings', icon: 'settings' },
     { path: '/admin', label: 'nav.admin', icon: 'admin_panel_settings', adminOnly: true },

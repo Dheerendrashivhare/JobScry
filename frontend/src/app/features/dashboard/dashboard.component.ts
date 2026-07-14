@@ -50,6 +50,9 @@ export class DashboardComponent implements OnInit {
   protected readonly result = signal<PipelineResult | null>(null);
   protected mode: SearchMode = 'daily';
 
+  /** No search = the run has nowhere to look and finds nothing. Say so BEFORE they click. */
+  protected readonly searchCount = signal<number | null>(null);
+
   // ng-apexcharts v1.15 uses signal inputs, so each option is bound as its own typed
   // field rather than one Partial<ChartComponent> blob.
   protected series = signal<ApexAxisChartSeries>([{ name: 'Jobs', data: [] }]);
@@ -73,8 +76,14 @@ export class DashboardComponent implements OnInit {
     this.api.listProfiles().subscribe((page) => {
       this.profiles.set(page.items);
       const preferred = page.items.find((p) => p.is_default) ?? page.items[0];
-      if (preferred) this.selectedId.set(preferred.id);
+      if (preferred) this.onProfileChange(preferred.id);
     });
+  }
+
+  protected onProfileChange(id: number): void {
+    this.selectedId.set(id);
+    this.searchCount.set(null);
+    this.api.listSearches(id).subscribe((page) => this.searchCount.set(page.total));
   }
 
   protected run(): void {

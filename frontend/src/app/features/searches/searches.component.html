@@ -1,0 +1,129 @@
+<h1 class="mb-2 text-2xl font-semibold">Searches</h1>
+<p class="mb-6 text-sm opacity-70">
+  A profile says <em>what you want</em>. A search says <em>where to look</em>. A profile with no
+  search finds nothing — the run simply has nowhere to go.
+</p>
+
+@if (profiles().length === 0) {
+  <mat-card class="p-6">
+    <p>Create a profile first.</p>
+  </mat-card>
+} @else {
+  <mat-card class="mb-6 p-4">
+    <mat-form-field class="min-w-64">
+      <mat-label>Profile</mat-label>
+      <mat-select [ngModel]="selectedProfile()" (ngModelChange)="onProfileChange($event)">
+        @for (p of profiles(); track p.id) {
+          <mat-option [value]="p.id">{{ p.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </mat-card>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <!-- existing searches -->
+    <div class="flex flex-col gap-4">
+      <h2 class="font-medium">Saved searches</h2>
+
+      @for (s of searches(); track s.id) {
+        <mat-card class="p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium">{{ s.name }}</span>
+                <mat-chip class="text-xs">{{ s.provider_slug ?? 'all providers' }}</mat-chip>
+                <mat-chip class="text-xs">{{ s.mode }}</mat-chip>
+              </div>
+              <div class="mt-1 truncate font-mono text-xs opacity-60">{{ pretty(s.params) }}</div>
+              <div class="mt-1 text-xs opacity-60">
+                last run: {{ s.last_run_at ?? 'never' }}
+              </div>
+            </div>
+            <button mat-icon-button (click)="remove(s.id)" aria-label="Delete search">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </mat-card>
+      } @empty {
+        <mat-card class="p-6">
+          <p class="mb-2" style="color: var(--mat-sys-error)">
+            <strong>No searches on this profile.</strong>
+          </p>
+          <p class="text-sm opacity-70">
+            This is why a run reports <code>searches_run: 0</code> and finds nothing. Add one
+            from a preset →
+          </p>
+        </mat-card>
+      }
+    </div>
+
+    <!-- add a search -->
+    <mat-card class="p-6">
+      <h2 class="mb-1 font-medium">Add a search</h2>
+      <p class="mb-4 text-sm opacity-70">Start from a preset — these are the recipes that work.</p>
+
+      <div class="mb-6 flex flex-col gap-2">
+        @for (preset of presets; track preset.label) {
+          <button
+            mat-stroked-button
+            class="!justify-start !text-left"
+            (click)="applyPreset(preset)"
+          >
+            <mat-icon>{{ preset.needsKey ? 'key' : 'bolt' }}</mat-icon>
+            <span class="ml-1">{{ preset.label }}</span>
+          </button>
+          <p class="mb-2 ml-2 text-xs opacity-60">{{ preset.hint }}</p>
+        }
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <mat-form-field>
+          <mat-label>Name</mat-label>
+          <input matInput [(ngModel)]="name" placeholder="Remotive daily" />
+        </mat-form-field>
+
+        <div class="grid grid-cols-2 gap-4">
+          <mat-form-field>
+            <mat-label>Provider</mat-label>
+            <mat-select [(ngModel)]="provider">
+              @for (p of providers(); track p.slug) {
+                <mat-option [value]="p.slug">{{ p.display_name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-label>Window</mat-label>
+            <mat-select [(ngModel)]="mode">
+              <mat-option value="daily">Daily (24h)</mat-option>
+              <mat-option value="catchup">Catch-up (7d)</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        @if (missingKeys().length) {
+          <p class="text-sm" style="color: #b45309">
+            <mat-icon class="!h-4 !w-4 !text-base align-middle">key</mat-icon>
+            This provider needs <strong>{{ missingKeys().join(', ') }}</strong> stored in
+            Settings, or it will be skipped at run time.
+          </p>
+        }
+
+        <mat-form-field>
+          <mat-label>Query params (JSON)</mat-label>
+          <textarea matInput rows="12" class="font-mono !text-xs" [(ngModel)]="paramsJson"></textarea>
+          <mat-hint>Passed straight to the provider adapter.</mat-hint>
+        </mat-form-field>
+
+        @if (jsonError(); as err) {
+          <p class="text-sm" style="color: var(--mat-sys-error)">{{ err }}</p>
+        }
+
+        <button mat-flat-button (click)="create()" [disabled]="saving()">
+          <mat-icon>add</mat-icon>
+          Save search
+        </button>
+      </div>
+    </mat-card>
+  </div>
+}
